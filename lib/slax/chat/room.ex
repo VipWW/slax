@@ -21,5 +21,9 @@ defmodule Slax.Chat.Room do
       message: "can only contain lowercase letters, numbers and dashes"
     )
     |> validate_length(:topic, max: 200)
+    # queries the DB for existing rooms with the same name
+    # and if it finds some, it marks changeset as invalid
+    |> unsafe_validate_unique(:name, Slax.Repo)
+    |> unique_constraint(:name)
   end
 end
