@@ -71,7 +71,12 @@ defmodule SlaxWeb.ChatRoomLive do
           </li>
         </ul>
       </div>
-      <div id="room-messages" class="flex flex-col grow overflow-auto" phx-update="stream">
+      <div
+        id="room-messages"
+        class="flex flex-col grow overflow-auto"
+        phx-update="stream"
+        phx-hook="RoomMessages"
+      >
         <.message
           :for={{dom_id, message} <- @streams.messages}
           dom_id={dom_id}
@@ -95,6 +100,7 @@ defmodule SlaxWeb.ChatRoomLive do
             name={@new_message_form[:body].name}
             placeholder={"Message ##{@room.name}"}
             phx-debounce
+            phx-hook="ChatMessageTextarea"
             rows="1"
           >{Phoenix.HTML.Form.normalize_value("textarea", @new_message_form[:body].value)}</textarea>
           <button class="shrink flex items-center justify-center h-6 w-6 rounded hover:bg-slate-200">
@@ -177,6 +183,8 @@ defmodule SlaxWeb.ChatRoomLive do
   end
 
   def handle_params(params, _uri, socket) do
+    if socket.assigns[:room], do: Chat.unsubscribe_from_room(socket.assigns.room)
+
     rooms = socket.assigns.rooms
 
     room =
@@ -190,6 +198,8 @@ defmodule SlaxWeb.ChatRoomLive do
 
     messages = Chat.list_messages_in_room(room)
 
+    Chat.subscribe_to_room(room)
+
     {:noreply,
      socket
      |> assign(
@@ -198,7 +208,8 @@ defmodule SlaxWeb.ChatRoomLive do
        page_title: "#" <> room.name
      )
      |> stream(:messages, messages, reset: true)
-     |> assign_message_form(Chat.change_message(%Message{}))}
+     |> assign_message_form(Chat.change_message(%Message{}))
+     |> push_event("scroll_messages_to_bottom", %{})}
   end
 
   defp assign_message_form(socket, changeset) do
@@ -220,10 +231,8 @@ defmodule SlaxWeb.ChatRoomLive do
 
     socket =
       case Chat.create_message(room, message_params, current_user) do
-        {:ok, message} ->
-          socket
-          |> stream_insert(:messages, message)
-          |> assign_message_form(Chat.change_message(%Message{}))
+        {:ok, _message} ->
+          assign_message_form(socket, Chat.change_message(%Message{}))
 
         {:error, changeset} ->
           assign_message_form(socket, changeset)
@@ -233,8 +242,21 @@ defmodule SlaxWeb.ChatRoomLive do
   end
 
   def handle_event("delete-message", %{"id" => id}, socket) do
-    {:ok, message} = Chat.delete_message_by_id(id, socket.assigns.current_user)
+    Chat.delete_message_by_id(id, socket.assigns.current_user)
 
+    {:noreply, socket}
+  end
+
+  def handle_info({:new_message, message}, socket) do
+    socket =
+      socket
+      |> stream_insert(:messages, message)
+      |> push_event("scroll_messages_to_bottom", %{})
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:message_deleted, message}, socket) do
     {:noreply, stream_delete(socket, :messages, message)}
   end
 end
