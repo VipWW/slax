@@ -31,7 +31,8 @@ defmodule Slax.Chat do
   def list_messages_in_room(%Room{id: room_id}) do
     from(m in Message,
       where: m.room_id == ^room_id,
-      order_by: [asc: :inserted_at, asc: :id]
+      order_by: [asc: :inserted_at, asc: :id],
+      preload: :user
     )
     |> Repo.all()
   end
