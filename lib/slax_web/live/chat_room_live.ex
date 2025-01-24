@@ -12,7 +12,16 @@ defmodule SlaxWeb.ChatRoomLive do
           <h1 class="text-sm font-bold leading-none">
             #{@room.name}
           </h1>
-          <div class="text-xs leading-none h-3.5">{@room.topic}</div>
+          <div
+            class={["text-xs leading-none h-3.5", @hide_topic? && "text-slate-600"]}
+            phx-click="toggle-topic"
+          >
+            <%= if @hide_topic? do %>
+              [Topic hidden]
+            <% else %>
+              {@room.topic}
+            <% end %>
+          </div>
         </div>
       </div>
     </div>
@@ -22,6 +31,10 @@ defmodule SlaxWeb.ChatRoomLive do
   def mount(_params, _session, socket) do
     room = Room |> Repo.all() |> List.first()
 
-    {:ok, socket |> assign(:room, room)}
+    {:ok, socket |> assign(room: room, hide_topic?: false)}
+  end
+
+  def handle_event("toggle-topic", _params, socket) do
+    {:noreply, socket |> update(:hide_topic?, &(!&1))}
   end
 end
