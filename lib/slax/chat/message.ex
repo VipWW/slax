@@ -5,15 +5,13 @@ defmodule Slax.Chat.Message do
   alias Slax.Accounts.User
   alias Slax.Chat.Room
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :binary_id
   schema "messages" do
     field :body, :string
 
     # By default assumes at the end: , foreign_key: :user_id
-    belongs_to :user, User
+    belongs_to :user, User, type: :binary_id
     # By default assumes at the end: , foreign_key: :room_id
-    belongs_to :room, Room
+    belongs_to :room, Room, type: :binary_id
 
     timestamps(type: :utc_datetime)
   end
