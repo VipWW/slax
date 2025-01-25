@@ -49,6 +49,12 @@ defmodule SlaxWeb.ChatRoomLive do
                 >
                   Browse rooms
                 </.link>
+                <.link
+                  phx-click={show_modal("new-room-modal")}
+                  class="block select-none cursor-pointer whitespace-nowrap text-gray-800 hover:text-white px-6 py-1 block hover:bg-sky-600"
+                >
+                  Create a new room
+                </.link>
               </div>
             </div>
           </div>
@@ -275,6 +281,11 @@ defmodule SlaxWeb.ChatRoomLive do
         </div>
       </div>
     </div>
+
+    <.modal id="new-room-modal">
+      <.header>New chat room</.header>
+      (Form goes here)
+    </.modal>
     """
   end
 
@@ -480,5 +491,15 @@ defmodule SlaxWeb.ChatRoomLive do
       end
 
     {:noreply, socket}
+  end
+
+  def handle_info({:message_deleted, message}, socket) do
+    {:noreply, stream_delete(socket, :messages, message)}
+  end
+
+  def handle_info(%{event: "presence_diff", payload: diff}, socket) do
+    online_users = OnlineUsers.update(socket.assigns.online_users, diff)
+
+    {:noreply, assign(socket, online_users: online_users)}
   end
 end
