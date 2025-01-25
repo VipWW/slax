@@ -29,6 +29,17 @@ defmodule Slax.Chat do
     Repo.all(from Room, order_by: [asc: :name])
   end
 
+  def list_rooms_with_joined(%User{} = user) do
+    query =
+      from r in Room,
+        left_join: m in RoomMembership,
+        on: r.id == m.room_id and m.user_id == ^user.id,
+        select: {r, not is_nil(m.id)},
+        order_by: [asc: :name]
+
+    Repo.all(query)
+  end
+
   def list_joined_rooms(%User{} = user) do
     user
     |> Repo.preload(:rooms)
