@@ -162,24 +162,22 @@ defmodule SlaxWeb.ChatRoomLive do
           Chat.get_first_room!()
       end
 
-    last_read_id = Chat.get_last_read_id(room, socket.assigns.current_user)
+    page = Chat.list_messages_in_room(room)
 
-    messages =
-      room
-      |> Chat.list_messages_in_room()
-      |> insert_date_dividers(socket.assigns.timezone)
-      |> maybe_insert_unread_marker(last_read_id)
+    last_read_id = Chat.get_last_read_id(room, socket.assigns.current_user)
 
     Chat.update_last_read_id(room, socket.assigns.current_user)
 
     socket
     |> assign(
       room: room,
+      last_read_id: last_read_id,
       joined?: Chat.joined?(room, socket.assigns.current_user),
       hide_topic?: false,
       page_title: "#" <> room.name
     )
-    |> stream(:messages, messages, reset: true)
+    |> stream(:messages, [], reset: true)
+    |> stream_message_page(page)
     |> assign_message_form(Chat.change_message(%Message{}))
     |> push_event("scroll_messages_to_bottom", %{})
     |> update(:rooms, fn rooms ->
@@ -191,6 +189,21 @@ defmodule SlaxWeb.ChatRoomLive do
       end)
     end)
     |> noreply()
+  end
+
+  defp stream_message_page(socket, %Paginator.Page{} = page) do
+    last_read_id = socket.assigns.last_read_id
+
+    messages =
+      page.entries
+      |> Enum.reverse()
+      |> insert_date_dividers(socket.assigns.timezone)
+      |> maybe_insert_unread_marker(last_read_id)
+      |> Enum.reverse()
+
+    socket
+    |> stream(:messages, messages, at: 0)
+    |> assign(:message_cursor, page.metadata.after)
   end
 
   defp insert_date_dividers(messages, nil), do: messages
@@ -298,6 +311,18 @@ defmodule SlaxWeb.ChatRoomLive do
       )
 
     {:noreply, socket}
+  end
+
+  def handle_event("load-more-messages", _, socket) do
+    page =
+      Chat.list_messages_in_room(
+        socket.assigns.room,
+        after: socket.assigns.message_cursor
+      )
+
+    socket
+    |> stream_message_page(page)
+    |> noreply()
   end
 
   def handle_info({:new_message, message}, socket) do
