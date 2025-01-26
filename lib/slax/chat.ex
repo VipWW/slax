@@ -152,4 +152,11 @@ defmodule Slax.Chat do
   defp get_membership(room, user) do
     Repo.get_by(RoomMembership, room_id: room.id, user_id: user.id)
   end
+
+  def get_message!(id) do
+    Message
+    |> where([m], m.id == ^id)
+    |> preload(:user)
+    |> Repo.one!()
+  end
 end

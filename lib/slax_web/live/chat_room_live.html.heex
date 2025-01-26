@@ -213,6 +213,17 @@
   />
 <% end %>
 
+<%= if assigns[:thread] do %>
+  <.live_component
+    id="thread"
+    module={ThreadComponent}
+    current_user={@current_user}
+    message={@thread}
+    room={@room}
+    timezone={@timezone}
+  />
+<% end %>
+
 <.modal
   id="new-room-modal"
   show={@live_action == :new}
