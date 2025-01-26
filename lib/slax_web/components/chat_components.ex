@@ -33,6 +33,7 @@ defmodule SlaxWeb.ChatComponents do
           data-confirm="Are you sure?"
           phx-click="delete-message"
           phx-value-id={@message.id}
+          phx-value-type={@message.__struct__ |> Module.split() |> List.last()}
         >
           <.icon name="hero-trash" class="h-4 w-4" />
         </button>
@@ -56,9 +57,38 @@ defmodule SlaxWeb.ChatComponents do
             {message_timestamp(@message, @timezone)}
           </span>
           <p class="text-sm">{@message.body}</p>
+          <div
+            :if={!@in_thread? && Enum.any?(@message.replies)}
+            class="inline-flex items-center mt-2 rounded border border-transparent hover:border-slate-200 hover:bg-slate-50 py-1 pr-2 box-border cursor-pointer"
+            phx-click="show-thread"
+            phx-value-id={@message.id}
+          >
+            <.thread_avatars replies={@message.replies} />
+            <a class="inline-block text-blue-600 text-xs font-medium ml-1" href="#">
+              {length(@message.replies)}
+              <%= if length(@message.replies) == 1 do %>
+                reply
+              <% else %>
+                replies
+              <% end %>
+            </a>
+          </div>
         </div>
       </div>
     </div>
+    """
+  end
+
+  defp thread_avatars(assigns) do
+    users =
+      assigns.replies
+      |> Enum.map(& &1.user)
+      |> Enum.uniq_by(& &1.id)
+
+    assigns = assign(assigns, :users, users)
+
+    ~H"""
+    <.user_avatar :for={user <- @users} class="h-6 w-6 rounded shrink-0 ml-1" user={user} />
     """
   end
 
