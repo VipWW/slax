@@ -119,18 +119,26 @@
     phx-hook="RoomMessages"
   >
     <%= for {dom_id, message} <- @streams.messages do %>
-      <%= if message == :unread_marker do %>
-        <div id={dom_id} class="w-full flex text-red-500 items-center gap-3 pr-5">
-          <div class="w-full h-px grow bg-red-500"></div>
-          <div class="text-sm">New</div>
-        </div>
-      <% else %>
-        <.message
-          current_user={@current_user}
-          dom_id={dom_id}
-          message={message}
-          timezone={@timezone}
-        />
+      <%= case message do %>
+        <% :unread_marker -> %>
+          <div id={dom_id} class="w-full flex text-red-500 items-center gap-3 pr-5">
+            <div class="w-full h-px grow bg-red-500"></div>
+            <div class="text-sm">New</div>
+          </div>
+        <% %Message{} -> %>
+          <.message
+            current_user={@current_user}
+            dom_id={dom_id}
+            message={message}
+            timezone={@timezone}
+          />
+        <% %Date{} -> %>
+          <div id={dom_id} class="flex flex-col items-center mt-2">
+            <hr class="w-full" />
+            <span class="flex items-center justify-center -mt-3 bg-white h-6 px-3 rounded-full border text-xs font-semibold mx-auto">
+              {format_date(message)}
+            </span>
+          </div>
       <% end %>
     <% end %>
   </div>

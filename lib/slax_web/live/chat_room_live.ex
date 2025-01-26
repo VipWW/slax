@@ -130,6 +130,31 @@ defmodule SlaxWeb.ChatRoomLive do
     |> Timex.format!("%-l:%M %p", :strftime)
   end
 
+  defp format_date(%Date{} = date) do
+    today = Date.utc_today()
+
+    case Date.diff(today, date) do
+      0 ->
+        "Today"
+
+      1 ->
+        "Yesterday"
+
+      _ ->
+        format_str = "%A, %B %e#{ordinal(date.day)}#{if today.year != date.year, do: " %Y"}"
+        Timex.format!(date, format_str, :strftime)
+    end
+  end
+
+  defp ordinal(day) do
+    cond do
+      rem(day, 10) == 1 and day != 11 -> "st"
+      rem(day, 10) == 2 and day != 12 -> "nd"
+      rem(day, 10) == 3 and day != 13 -> "rd"
+      true -> "th"
+    end
+  end
+
   def mount(_params, _session, socket) do
     rooms = Chat.list_joined_rooms_with_unread_counts(socket.assigns.current_user)
     users = Accounts.list_users()
@@ -157,6 +182,7 @@ defmodule SlaxWeb.ChatRoomLive do
       dom_id: fn
         %Message{id: id} -> "messages-#{id}"
         :unread_marker -> "messages-unread-marker"
+        %Date{} = date -> to_string(date)
       end
     )
     |> ok()
@@ -181,6 +207,7 @@ defmodule SlaxWeb.ChatRoomLive do
     messages =
       room
       |> Chat.list_messages_in_room()
+      |> insert_date_dividers(socket.assigns.timezone)
       |> maybe_insert_unread_marker(last_read_id)
 
     Chat.update_last_read_id(room, socket.assigns.current_user)
@@ -206,10 +233,27 @@ defmodule SlaxWeb.ChatRoomLive do
     |> noreply()
   end
 
+  defp insert_date_dividers(messages, nil), do: messages
+
+  defp insert_date_dividers(messages, timezone) do
+    messages
+    |> Enum.group_by(fn message ->
+      message.inserted_at
+      |> DateTime.shift_zone!(timezone)
+      |> DateTime.to_date()
+    end)
+    |> Enum.sort_by(fn {date, _msgs} -> date end, &(Date.compare(&1, &2) != :gt))
+    |> Enum.flat_map(fn {date, messages} -> [date | messages] end)
+  end
+
   defp maybe_insert_unread_marker(messages, nil), do: messages
 
   defp maybe_insert_unread_marker(messages, last_read_id) do
-    {read, unread} = Enum.split_while(messages, &(&1.id <= last_read_id))
+    {read, unread} =
+      Enum.split_while(messages, fn
+        %Message{} = message -> message.id <= last_read_id
+        _ -> true
+      end)
 
     if unread == [] do
       read
