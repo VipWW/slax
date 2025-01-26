@@ -24,10 +24,12 @@ import topbar from "../vendor/topbar"
 
 import RoomMessages from "./hooks/RoomMessages"
 import ChatMessageTextarea from "./hooks/ChatMessageTextarea"
+import Thread from "./hooks/Thread"
 
 const hooks = {
   RoomMessages,
-  ChatMessageTextarea
+  ChatMessageTextarea,
+  Thread
 }
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
