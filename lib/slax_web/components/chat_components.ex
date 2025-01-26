@@ -2,13 +2,12 @@ defmodule SlaxWeb.ChatComponents do
   use SlaxWeb, :html
 
   alias Slax.Accounts.User
-  alias Slax.Chat.Message
 
   import SlaxWeb.UserComponents
 
   attr :current_user, User, required: true
   attr :dom_id, :string, required: true
-  attr :message, Message, required: true
+  attr :message, :any, required: true
   attr :in_thread?, :boolean, default: false
   attr :timezone, :string, required: true
 

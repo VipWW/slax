@@ -3,7 +3,7 @@ defmodule Slax.Chat.Message do
   import Ecto.Changeset
 
   alias Slax.Accounts.User
-  alias Slax.Chat.Room
+  alias Slax.Chat.{Reply, Room}
 
   schema "messages" do
     field :body, :string
@@ -12,6 +12,8 @@ defmodule Slax.Chat.Message do
     belongs_to :user, User, type: :binary_id
     # By default assumes at the end: , foreign_key: :room_id
     belongs_to :room, Room, type: :binary_id
+
+    has_many :replies, Reply
 
     timestamps(type: :utc_datetime)
   end
